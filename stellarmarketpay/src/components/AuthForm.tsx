@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { User, LoginCredentials, RegisterCredentials } from '@/types/auth';
 import { AuthService } from '@/lib/auth';
+import { SecurityService } from '@/lib/security';
 
 interface AuthFormProps {
   onAuthSuccess: (user: User) => void;
@@ -21,16 +22,84 @@ export default function AuthForm({ onAuthSuccess }: AuthFormProps) {
   });
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
+    const { name, value } = e.target;
+    
+    // Sanitize input to prevent XSS
+    const sanitizedValue = SecurityService.sanitizeInput(value);
+    
+    setFormData(prev => ({
+      ...prev,
+      [name]: sanitizedValue
+    }));
+  };
+
+  const validateForm = (): { isValid: boolean; errors: string[] } => {
+    const errors: string[] = [];
+    
+    // Validate email
+    if (isLogin || !isLogin) {
+      const emailValidation = SecurityService.validateEmail(formData.email);
+      if (!emailValidation.isValid) {
+        errors.push(emailValidation.error || 'Invalid email');
+      }
+    }
+
+    // Validate password
+    const passwordValidation = SecurityService.validatePassword(formData.password);
+    if (!passwordValidation.isValid) {
+      errors.push(...passwordValidation.errors);
+    }
+
+    // Validate name (for registration)
+    if (!isLogin) {
+      const nameValidation = SecurityService.validateName(formData.name, 'Name');
+      if (!nameValidation.isValid) {
+        errors.push(nameValidation.error || 'Invalid name');
+      }
+    }
+
+    // Validate business name (for registration)
+    if (!isLogin) {
+      const businessValidation = SecurityService.validateName(formData.businessName, 'Business name');
+      if (!businessValidation.isValid) {
+        errors.push(businessValidation.error || 'Invalid business name');
+      }
+    }
+
+    // Validate phone (optional)
+    if (formData.phone && !isLogin) {
+      const phoneValidation = SecurityService.validatePhone(formData.phone);
+      if (!phoneValidation.isValid) {
+        errors.push(phoneValidation.error || 'Invalid phone number');
+      }
+    }
+
+    return {
+      isValid: errors.length === 0,
+      errors
+    };
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Check rate limiting
+    const identifier = formData.email || 'unknown';
+    if (SecurityService.isRateLimited(isLogin ? 'login' : 'register', identifier)) {
+      setError('Too many attempts. Please try again later.');
+      return;
+    }
+
     setIsLoading(true);
     setError('');
+
+    // Validate form
+    const validation = validateForm();
+    if (!validation.isValid) {
+      setError(validation.errors.join(', '));
+      setIsLoading(false);
+      return;
+    }
 
     try {
       let result;
@@ -53,8 +122,25 @@ export default function AuthForm({ onAuthSuccess }: AuthFormProps) {
 
       AuthService.persistAuth(result.token);
       onAuthSuccess(result.user);
+      
+      // Log successful authentication
+      SecurityService.logSecurityEvent('authentication_success', {
+        action: isLogin ? 'login' : 'register',
+        email: formData.email,
+        success: true
+      });
+      
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Authentication failed');
+      const errorMessage = err instanceof Error ? err.message : 'Authentication failed';
+      setError(errorMessage);
+      
+      // Log failed authentication
+      SecurityService.logSecurityEvent('authentication_failed', {
+        action: isLogin ? 'login' : 'register',
+        email: formData.email,
+        error: errorMessage,
+        success: false
+      });
     } finally {
       setIsLoading(false);
     }
