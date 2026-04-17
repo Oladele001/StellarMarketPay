@@ -1,0 +1,33 @@
+{
+  "version": 2,
+  "name": "stellarmarketpay",
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/next"
+    }
+  ],
+  "routes": [
+    {
+      "src": "src/app/page.tsx",
+      "dest": "/"
+    },
+    {
+      "src": "src/app/api",
+      "dest": "/api"
+    }
+  ],
+  "env": {
+    "NEXT_PUBLIC_STELLAR_NETWORK": "testnet",
+    "NEXT_PUBLIC_APP_URL": "https://stellarmarketpay.vercel.app",
+    "NEXT_PUBLIC_API_URL": "https://stellarmarketpay.vercel.app/api"
+  },
+  "functions": {
+    "src/api/**/*.ts": {
+      "maxDuration": 30
+    }
+  },
+  "regions": ["iad1"],
+  "framework": "nextjs",
+  "outputDirectory": ".next"
+}
