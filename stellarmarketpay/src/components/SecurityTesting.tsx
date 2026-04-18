@@ -114,22 +114,17 @@ export default function SecurityTesting() {
             'path/to/file'
           ];
 
-          const results = testInputs.map((input, index) => {
+          return testInputs.map((input, index) => {
             const detection = SecurityService.detectAttackPattern(input);
             return {
+              id: `test-7-${index}`,
+              name: `Attack Test ${index + 1}`,
+              description: `Test ${input}`,
               status: detection.isAttack ? 'failed' : 'passed',
               details: detection.isAttack ? `Attack pattern detected: ${detection.type}` : 'No attack pattern detected',
               timestamp: new Date()
-            };
+            } as SecurityTest;
           });
-
-          return {
-            id: `test-7-${index}`,
-            name: `Attack Test ${index + 1}`,
-            description: `Test ${input}`,
-            ...results[index]
-          };
-        }).flat();
         }
       },
       {
@@ -194,7 +189,11 @@ export default function SecurityTesting() {
     for (const testSuite of inputTests) {
       try {
         const result = await testSuite.test();
-        results.push(result);
+        if (Array.isArray(result)) {
+          results.push(...result as SecurityTest[]);
+        } else {
+          results.push(result as SecurityTest);
+        }
       } catch (error) {
         results.push({
           id: testSuite.id,

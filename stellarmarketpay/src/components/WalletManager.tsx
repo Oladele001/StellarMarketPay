@@ -71,11 +71,26 @@ export default function WalletManager({ user, onAccountUpdate }: WalletManagerPr
   };
 
   const copyToClipboard = async (text: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
-    } catch (error) {
-      console.error('Failed to copy:', error);
+    if (navigator.clipboard) {
+      try {
+        await navigator.clipboard.writeText(text);
+        return;
+      } catch (error) {
+        console.error('Clipboard API failed:', error);
+      }
     }
+    // Fallback for older browsers
+    const textArea = document.createElement('textarea');
+    textArea.value = text;
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    try {
+      document.execCommand('copy');
+    } catch (err) {
+      console.error('Fallback copy failed:', err);
+    }
+    document.body.removeChild(textArea);
   };
 
   const refreshBalance = async () => {
@@ -109,7 +124,7 @@ export default function WalletManager({ user, onAccountUpdate }: WalletManagerPr
         <h3 className="text-lg font-semibold text-gray-900">Wallet Manager</h3>
         <button
           onClick={refreshBalance}
-          className="px-3 py-1 bg-blue-100 hover:bg-blue-200 rounded-md text-sm text-blue-700"
+          className="px-3 py-1 bg-primary-100 hover:bg-primary-200 rounded-md text-sm text-primary-700"
         >
           Refresh
         </button>
@@ -118,20 +133,20 @@ export default function WalletManager({ user, onAccountUpdate }: WalletManagerPr
       <div className="mb-6">
         <div className="flex items-center justify-between mb-4">
           <span className="text-sm font-medium text-gray-700">Account Status</span>
-          <span className={`px-2 py-1 text-xs rounded-full ${
-            accountExists 
-              ? 'bg-green-100 text-green-800' 
-              : 'bg-yellow-100 text-yellow-800'
-          }`}>
-            {accountExists ? 'Active' : 'Not Funded'}
-          </span>
+        <span className={`px-2 py-1 text-xs rounded-full ${
+          accountExists 
+            ? 'bg-stellar-100 text-stellar-800' 
+            : 'bg-yellow-100 text-yellow-800'
+        }`}>
+          {accountExists ? 'Active' : 'Not Funded'}
+        </span>
         </div>
 
         <div className="bg-gray-50 rounded-lg p-4">
           <div className="flex justify-between items-center mb-3">
             <span className="text-sm font-medium text-gray-700">Balance</span>
             <span className="text-lg font-bold text-gray-900">
-              {parseFloat(stellarAccount?.balance || '0').toFixed(7)} XLM
+              {(stellarAccount ? parseFloat(stellarAccount.balance || '0').toFixed(7) : '0.0000000')} XLM
             </span>
           </div>
           
@@ -203,7 +218,7 @@ export default function WalletManager({ user, onAccountUpdate }: WalletManagerPr
           <button
             onClick={fundAccount}
             disabled={isFunding}
-            className="w-full px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-green-300 text-white rounded-md font-medium text-sm"
+            className="w-full px-4 py-2 bg-stellar-600 hover:bg-stellar-700 disabled:bg-stellar-300 text-white rounded-md font-medium text-sm transition-colors duration-200"
           >
             {isFunding ? 'Funding Account...' : 'Fund Testnet Account (10,000 XLM)'}
           </button>

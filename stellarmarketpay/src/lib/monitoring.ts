@@ -3,7 +3,7 @@
 interface AnalyticsEvent {
   event: string;
   category: 'auth' | 'payment' | 'transfer' | 'qr' | 'wallet' | 'error' | 'performance';
-  timestamp: Date;
+  timestamp?: Date;
   userId?: string;
   sessionId?: string;
   data?: any;
@@ -13,6 +13,9 @@ interface AnalyticsEvent {
     referrer?: string;
     path?: string;
     duration?: number;
+    value?: number;
+    fromCountry?: string;
+    toCountry?: string;
   };
 }
 
@@ -116,7 +119,7 @@ export class MonitoringService {
   }
 
   // Track QR code generation
-  static trackQRGeneration(userId?: string, purpose: string): void {
+  static trackQRGeneration(userId: string | undefined, purpose: string): void {
     this.trackEvent({
       event: 'qr_generated',
       category: 'qr',
@@ -292,7 +295,7 @@ export class MonitoringService {
   }
 
   // Health check
-  static healthCheck(): Promise<{ status: 'healthy' | 'unhealthy'; checks: any[] }> {
+  static async healthCheck(): Promise<{ status: 'healthy' | 'unhealthy'; checks: any[] }> {
     const checks = [];
     
     // Check localStorage availability
@@ -300,7 +303,7 @@ export class MonitoringService {
       localStorage.setItem('health_check', 'test');
       localStorage.removeItem('health_check');
       checks.push({ name: 'localStorage', status: 'pass' });
-    } catch (error) {
+    } catch (error: any) {
       checks.push({ name: 'localStorage', status: 'fail', error: error.message });
     }
     
@@ -309,7 +312,7 @@ export class MonitoringService {
       sessionStorage.setItem('health_check', 'test');
       sessionStorage.removeItem('health_check');
       checks.push({ name: 'sessionStorage', status: 'pass' });
-    } catch (error) {
+    } catch (error: any) {
       checks.push({ name: 'sessionStorage', status: 'fail', error: error.message });
     }
     
@@ -317,7 +320,7 @@ export class MonitoringService {
     try {
       const response = await fetch('/api/health', { method: 'HEAD' });
       checks.push({ name: 'api', status: response.ok ? 'pass' : 'fail' });
-    } catch (error) {
+    } catch (error: any) {
       checks.push({ name: 'api', status: 'fail', error: error.message });
     }
     

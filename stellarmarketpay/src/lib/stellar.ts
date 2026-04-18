@@ -16,6 +16,26 @@ export class StellarService {
       sequence: 0
     };
   }
+  // Check if an account exists on the ledger
+  static async accountExists(publicKey: string): Promise<boolean> {
+    try {
+      await server.loadAccount(publicKey);
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  // Fund a testnet account using Friendbot
+  static async fundTestnetAccount(publicKey: string): Promise<boolean> {
+    try {
+      const response = await fetch(`https://friendbot.stellar.org?addr=${encodeURIComponent(publicKey)}`);
+      return response.ok;
+    } catch (error) {
+      console.error('Failed to fund testnet account:', error);
+      return false;
+    }
+  }
 
   // Load account details from Horizon
   static async loadAccount(publicKey: string): Promise<StellarAccount> {
@@ -98,21 +118,21 @@ export class StellarService {
     }
   }
 
-  // Stream payments for an account
-  static streamPayments(
+  // Stream transactions for an account to match memos
+  static streamTransactions(
     publicKey: string,
-    onPayment: (payment: any) => void
+    onTransaction: (tx: any) => void
   ): () => void {
-    const es = server.payments()
+    const es = server.transactions()
       .forAccount(publicKey)
       .cursor('now')
       .stream({
-        onmessage: onPayment
+        onmessage: onTransaction,
+        onerror: (err) => console.error('Stream error:', err)
       });
     
     return () => {
-      // Stream cleanup - the stream will be garbage collected
-      console.log('Stream cleanup called');
+      if (typeof es === 'function') es();
     };
   }
 
