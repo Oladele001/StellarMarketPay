@@ -61,39 +61,13 @@ export default function ExpenseTracker({ user }: ExpenseTrackerProps) {
           date: new Date(expense.date)
         })));
       } else {
-        // Generate mock data for demonstration
-        const mockExpenses = generateMockExpenses();
-        setExpenses(mockExpenses);
-        localStorage.setItem(`expenses_${user.id}`, JSON.stringify(mockExpenses));
+        setExpenses([]);
       }
     } catch (error) {
       console.error('Failed to load expenses:', error);
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const generateMockExpenses = (): Expense[] => {
-    const mockExpenses: Expense[] = [];
-    const now = new Date();
-    
-    for (let i = 0; i < 20; i++) {
-      const date = new Date(now);
-      date.setDate(date.getDate() - Math.floor(Math.random() * 90));
-      
-      mockExpenses.push({
-        id: `expense_${i}`,
-        amount: Math.random() * 500 + 10,
-        category: categories[Math.floor(Math.random() * categories.length)].id,
-        description: `Expense ${i + 1}`,
-        date: date,
-        asset: 'XLM',
-        status: ['pending', 'paid', 'overdue'][Math.floor(Math.random() * 3)] as 'pending' | 'paid' | 'overdue',
-        vendor: `Vendor ${Math.floor(Math.random() * 10) + 1}`
-      });
-    }
-    
-    return mockExpenses.sort((a, b) => b.date.getTime() - a.date.getTime());
   };
 
   const saveExpenses = (updatedExpenses: Expense[]) => {

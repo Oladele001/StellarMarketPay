@@ -1,7 +1,8 @@
 export interface StellarAccount {
   publicKey: string;
   secretKey?: string;
-  balance: string;
+  balance: string; // XLM Balance
+  usdcBalance?: string; // USDC Balance
   sequence: number;
 }
 

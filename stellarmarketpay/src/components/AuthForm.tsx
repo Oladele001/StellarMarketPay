@@ -45,11 +45,11 @@ export default function AuthForm({ onAuthSuccess }: AuthFormProps) {
       }
       const publicKey = accessResponse.address;
 
-      // 2. Validate Network to ensure they are on Testnet
+      // 2. Optional: Validate Network (warn but don't block)
       const netResponse = await getNetwork();
       if (netResponse.network !== 'TESTNET') {
-        setError('Please switch your Freighter wallet to TESTNET network.');
-        return;
+        console.warn('Wallet on', netResponse.network, '- Testnet recommended for MVP');
+        // Proceed anyway for demo flexibility
       }
 
       // 3. Connect User
@@ -62,6 +62,10 @@ export default function AuthForm({ onAuthSuccess }: AuthFormProps) {
     }
   };
 
+  const handleInstall = () => {
+    window.open('https://freighter.app/', '_blank');
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-950 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8 bg-gray-900 p-8 rounded-2xl shadow-2xl border border-gray-800">
@@ -70,10 +74,10 @@ export default function AuthForm({ onAuthSuccess }: AuthFormProps) {
             <span className="text-4xl text-green-400">⚡</span>
           </div>
           <h2 className="mt-8 text-center text-3xl font-extrabold text-white tracking-tight">
-            Connect Wallet
+            Accept instant payments with Stellar — almost zero fees
           </h2>
           <p className="mt-3 text-center text-sm text-gray-400">
-            Securely login with Freighter to access your StellarMarketPay merchant dashboard and accept instant payments.
+            A beautiful, mobile-first app designed to help you accept instant payments securely without any middlemen.
           </p>
         </div>
 
@@ -86,7 +90,7 @@ export default function AuthForm({ onAuthSuccess }: AuthFormProps) {
 
           <button
             onClick={handleConnect}
-            disabled={isLoading}
+            disabled={isLoading || !hasFreighter}
             className="group relative w-full flex justify-center py-3.5 px-4 border border-transparent text-sm font-bold rounded-xl text-gray-950 bg-green-500 hover:bg-green-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 transform hover:scale-[1.02]"
           >
             {isLoading ? (
@@ -94,12 +98,19 @@ export default function AuthForm({ onAuthSuccess }: AuthFormProps) {
                 <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-950 mr-3"></div>
                 Connecting...
               </span>
-            ) : hasFreighter ? (
-              'Connect Freighter Wallet'
             ) : (
-              'Install Freighter Wallet'
+              'Connect Freighter Wallet'
             )}
           </button>
+
+          {!hasFreighter && (
+            <button
+              onClick={handleInstall}
+              className="group relative w-full flex justify-center py-3.5 px-4 border border-gray-700 text-sm font-bold rounded-xl text-white bg-transparent hover:bg-gray-800 transition-all duration-300"
+            >
+              I don't have a wallet yet
+            </button>
+          )}
         </div>
 
         <div className="mt-8 pt-6 border-t border-gray-800">

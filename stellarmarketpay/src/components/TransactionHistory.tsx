@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { User } from '@/types/auth';
 import { PaymentRequest } from '@/types/stellar';
+import { StellarService } from '@/lib/stellar';
 
 interface TransactionHistoryProps {
   user: User;
@@ -23,38 +24,26 @@ export default function TransactionHistory({ user }: TransactionHistoryProps) {
   const loadTransactions = async () => {
     setIsLoading(true);
     try {
-      // Mock transaction data
-      const mockTransactions = generateMockTransactions();
-      setTransactions(mockTransactions);
+      const history = await StellarService.getPaymentsHistory(user.stellarPublicKey);
+      const mapped = history.map((tx: any) => {
+        const isIncoming = tx.to === user.stellarPublicKey;
+        return {
+          id: tx.id,
+          amount: tx.amount || '0',
+          asset: tx.asset_code || 'XLM',
+          destination: isIncoming ? tx.from : tx.to,
+          status: tx.transaction?.successful ? 'completed' : 'failed',
+          createdAt: new Date(tx.created_at),
+          completedAt: new Date(tx.created_at)
+        };
+      });
+      setTransactions(mapped);
     } catch (error) {
       console.error('Failed to load transactions:', error);
+      setTransactions([]);
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const generateMockTransactions = (): PaymentRequest[] => {
-    const transactions: PaymentRequest[] = [];
-    const now = new Date();
-    
-    for (let i = 0; i < 50; i++) {
-      const date = new Date(now);
-      date.setDate(date.getDate() - Math.floor(Math.random() * 90));
-      
-      const isIncoming = Math.random() > 0.3;
-      
-      transactions.push({
-        id: `tx_${i}`,
-        amount: (Math.random() * 1000 + 0.1).toFixed(7),
-        asset: ['XLM', 'USD', 'EUR', 'NGN'][Math.floor(Math.random() * 4)],
-        destination: isIncoming ? user.stellarPublicKey : 'G' + Math.random().toString(36).substr(2, 56).toUpperCase(),
-        status: 'completed',
-        createdAt: date,
-        completedAt: date
-      });
-    }
-    
-    return transactions.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
   };
 
   const filteredTransactions = transactions.filter(transaction => {

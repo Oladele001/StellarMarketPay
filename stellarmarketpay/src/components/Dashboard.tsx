@@ -14,8 +14,10 @@ interface DashboardProps {
 export default function Dashboard({ user, onLogout }: DashboardProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [balance, setBalance] = useState('0');
+  const [usdcBalance, setUsdcBalance] = useState('0');
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [recentTransactions, setRecentTransactions] = useState<any[]>([]);
+  const [stats, setStats] = useState({ todaySales: 0, totalTx: 0, profit: 0 });
   const [successToast, setSuccessToast] = useState<{show: boolean, memo: string, message: string}>({ show: false, memo: '', message: '' });
 
   // Initial Data Load
@@ -24,14 +26,41 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
 
     const loadData = async () => {
       try {
-        const [account, history] = await Promise.all([
-          StellarService.loadAccount(user.stellarPublicKey).catch(() => ({ balance: '0' })),
-          StellarService.getTransactionHistory(user.stellarPublicKey).catch(() => [])
+        const [account, history, payments] = await Promise.all([
+          StellarService.loadAccount(user.stellarPublicKey).catch(() => ({ balance: '0', usdcBalance: '0', publicKey: user.stellarPublicKey, sequence: 0 })),
+          StellarService.getTransactionHistory(user.stellarPublicKey).catch(() => []),
+          StellarService.getPaymentsHistory(user.stellarPublicKey).catch(() => [])
         ]);
 
         if (isMounted) {
           setBalance(account.balance);
+          setUsdcBalance(account.usdcBalance || '0');
           setRecentTransactions(history);
+
+          // Calculate stats
+          const expensesStr = localStorage.getItem(`expenses_${user.id}`);
+          const expenses = expensesStr ? JSON.parse(expensesStr) : [];
+          const totalExpenses = expenses.reduce((sum: number, e: any) => sum + parseFloat(e.amount), 0);
+
+          let todaySales = 0;
+          let totalSales = 0;
+          const today = new Date().toDateString();
+
+          payments.forEach((p: any) => {
+            if (p.to === user.stellarPublicKey) {
+              const amount = parseFloat(p.amount || '0');
+              totalSales += amount;
+              if (new Date(p.created_at).toDateString() === today) {
+                 todaySales += amount;
+              }
+            }
+          });
+
+          setStats({
+            todaySales,
+            totalTx: payments.length,
+            profit: totalSales - totalExpenses
+          });
         }
       } catch (error) {
         console.error('Failed to load Dashboard data:', error);
@@ -168,12 +197,20 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
             
             <div className="relative z-10 flex flex-col h-full justify-between">
               <div>
-                <h2 className="text-green-100/80 font-medium text-sm uppercase tracking-wider mb-1">Available Balance</h2>
-                <div className="flex items-baseline space-x-2">
-                  <span className="text-5xl font-extrabold text-white tracking-tight">
-                    {parseFloat(balance).toFixed(2)}
-                  </span>
-                  <span className="text-xl font-bold text-green-200">XLM</span>
+                <h2 className="text-green-100/80 font-medium text-sm uppercase tracking-wider mb-1">Available Balances</h2>
+                <div className="flex flex-col sm:flex-row sm:items-baseline space-y-2 sm:space-y-0 sm:space-x-8 mt-2">
+                  <div className="flex items-baseline space-x-2">
+                    <span className="text-5xl font-extrabold text-white tracking-tight">
+                      {parseFloat(balance).toFixed(2)}
+                    </span>
+                    <span className="text-xl font-bold text-green-200">XLM</span>
+                  </div>
+                  <div className="flex items-baseline space-x-2 opacity-90">
+                    <span className="text-4xl font-extrabold text-white tracking-tight">
+                      {parseFloat(usdcBalance).toFixed(2)}
+                    </span>
+                    <span className="text-lg font-bold text-blue-200">USDC</span>
+                  </div>
                 </div>
               </div>
               
@@ -210,24 +247,22 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
           </div>
         </div>
 
-        {/* Quick Actions */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {[
-            { icon: '📱', title: 'QR Scan', desc: 'Accept in-person', action: () => setShowPaymentModal(true) },
-            { icon: '🔗', title: 'Payment Link', desc: 'Share on WhatsApp', action: () => setShowPaymentModal(true) },
-            { icon: '📊', title: 'Analytics', desc: 'View profit/loss', action: () => {} },
-            { icon: '💸', title: 'Send', desc: 'Transfer funds', action: () => {} }
-          ].map((action, i) => (
-            <div 
-              key={i} 
-              onClick={action.action}
-              className="bg-gray-900 rounded-2xl p-6 border border-gray-800 hover:border-green-500/50 hover:bg-gray-800/80 transition-all cursor-pointer group shadow-sm hover:shadow-green-900/20"
-            >
-              <div className="text-3xl mb-3 transform group-hover:scale-110 transition-transform">{action.icon}</div>
-              <h3 className="font-semibold text-gray-200 mb-1">{action.title}</h3>
-              <p className="text-xs text-gray-500">{action.desc}</p>
-            </div>
-          ))}
+        {/* Quick Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="bg-gray-900 rounded-3xl p-6 border border-gray-800 shadow-sm hover:border-green-500/50 transition-colors">
+            <h3 className="text-gray-400 font-medium text-sm mb-1 uppercase tracking-wider">Today's Sales</h3>
+            <p className="text-3xl font-bold text-gray-100">{stats.todaySales.toFixed(2)} <span className="text-sm font-normal text-gray-500">XLM</span></p>
+          </div>
+          <div className="bg-gray-900 rounded-3xl p-6 border border-gray-800 shadow-sm hover:border-green-500/50 transition-colors">
+             <h3 className="text-gray-400 font-medium text-sm mb-1 uppercase tracking-wider">Total Transactions</h3>
+             <p className="text-3xl font-bold text-gray-100">{stats.totalTx}</p>
+          </div>
+          <div className="bg-gray-900 rounded-3xl p-6 border border-gray-800 shadow-sm hover:border-green-500/50 transition-colors">
+             <h3 className="text-gray-400 font-medium text-sm mb-1 uppercase tracking-wider">Net Profit</h3>
+             <p className={`text-3xl font-bold ${stats.profit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                {stats.profit >= 0 ? '+' : ''}{stats.profit.toFixed(2)} <span className="text-sm font-normal text-gray-500">XLM</span>
+             </p>
+          </div>
         </div>
 
         {/* Recent Transactions */}

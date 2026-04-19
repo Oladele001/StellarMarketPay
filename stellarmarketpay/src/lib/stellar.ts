@@ -41,11 +41,13 @@ export class StellarService {
   static async loadAccount(publicKey: string): Promise<StellarAccount> {
     try {
       const account = await server.loadAccount(publicKey);
-      const balance = account.balances.find((b: any) => b.asset_type === 'native');
+      const xlmBalance = account.balances.find((b: any) => b.asset_type === 'native');
+      const usdcBalance = account.balances.find((b: any) => b.asset_code === 'USDC');
       
       return {
         publicKey: account.accountId(),
-        balance: balance ? balance.balance : '0',
+        balance: xlmBalance ? xlmBalance.balance : '0',
+        usdcBalance: usdcBalance ? usdcBalance.balance : '0',
         sequence: parseInt(account.sequence.toString())
       };
     } catch (error) {
@@ -141,10 +143,27 @@ export class StellarService {
     try {
       const transactions = await server.transactions()
         .forAccount(publicKey)
+        .order('desc')
         .limit(10)
         .call();
       
       return transactions.records;
+    } catch (error) {
+      throw new Error('Failed to fetch transaction history');
+    }
+  }
+
+  // Get payments history (specifically payments with amounts)
+  static async getPaymentsHistory(publicKey: string): Promise<any[]> {
+    try {
+      const payments = await server.payments()
+        .forAccount(publicKey)
+        .order('desc')
+        .limit(50)
+        .join('transactions')
+        .call();
+      
+      return payments.records;
     } catch (error) {
       throw new Error('Failed to fetch transaction history');
     }

@@ -26,15 +26,26 @@ export default function SalesDashboard({ user }: SalesDashboardProps) {
     try {
       // In a real app, this would fetch from your backend
       // For now, we'll use mock data
-      const mockPayments = generateMockPayments();
-      setPayments(mockPayments);
+      const history = await StellarService.getPaymentsHistory(user.stellarPublicKey);
+      const payments: PaymentRequest[] = history
+        .filter(tx => tx.to === user.stellarPublicKey)
+        .map((tx: any) => ({
+          id: tx.id,
+          amount: tx.amount || '0',
+          asset: tx.asset_code || 'XLM',
+          destination: tx.from,
+          status: 'completed',
+          createdAt: new Date(tx.created_at),
+          completedAt: new Date(tx.created_at)
+        }));
+      setPayments(payments);
       
-      const total = mockPayments.reduce((sum, payment) => 
+      const total = payments.reduce((sum, payment) => 
         sum + parseFloat(payment.amount), 0
       );
       setTotalRevenue(total);
-      setTransactionCount(mockPayments.length);
-      setAverageTransaction(mockPayments.length > 0 ? total / mockPayments.length : 0);
+      setTransactionCount(payments.length);
+      setAverageTransaction(payments.length > 0 ? total / payments.length : 0);
     } catch (error) {
       console.error('Failed to load payment data:', error);
     } finally {
@@ -42,28 +53,7 @@ export default function SalesDashboard({ user }: SalesDashboardProps) {
     }
   };
 
-  const generateMockPayments = (): PaymentRequest[] => {
-    const payments: PaymentRequest[] = [];
-    const now = new Date();
-    const daysBack = timeRange === '7d' ? 7 : timeRange === '30d' ? 30 : 90;
-    
-    for (let i = 0; i < Math.min(daysBack * 2, 50); i++) {
-      const date = new Date(now);
-      date.setDate(date.getDate() - Math.floor(Math.random() * daysBack));
-      
-      payments.push({
-        id: `payment_${i}`,
-        amount: (Math.random() * 100 + 1).toFixed(7),
-        asset: 'XLM',
-        destination: user.stellarPublicKey,
-        status: 'completed',
-        createdAt: date,
-        completedAt: date
-      });
-    }
-    
-    return payments.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-  };
+
 
   const getDailyData = () => {
     const data: { date: string; amount: number }[] = [];

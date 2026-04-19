@@ -30,8 +30,66 @@ export default function PaymentAnalytics({ user }: PaymentAnalyticsProps) {
   const loadAnalytics = async () => {
     setIsLoading(true);
     try {
-      const mockData = generateMockAnalytics();
-      setAnalytics(mockData);
+      const history = await StellarService.getPaymentsHistory(user.stellarPublicKey);
+      const transactions = history
+        .filter(tx => tx.to === user.stellarPublicKey)
+        .map((tx: any) => ({
+          id: tx.id,
+          amount: tx.amount || '0',
+          asset: tx.asset_code || 'XLM',
+          destination: tx.from,
+          status: 'completed',
+          createdAt: new Date(tx.created_at),
+          completedAt: new Date(tx.created_at)
+        }));
+      
+      const totalRevenue = transactions.reduce((sum, tx) => sum + parseFloat(tx.amount), 0);
+      const totalTransactions = transactions.length;
+      const averageTransaction = totalTransactions > 0 ? totalRevenue / totalTransactions : 0;
+      
+      const days = timeRange === '7d' ? 7 : timeRange === '30d' ? 30 : 90;
+      const dailyAverage = totalRevenue / days;
+      const weeklyAverage = totalRevenue / (days / 7);
+      const monthlyAverage = totalRevenue / (days / 30);
+      
+      // Top payers mock simplified to real senders
+      const payerMap: { [key: string]: { amount: number; count: number } } = {};
+      transactions.forEach(tx => {
+        const payer = tx.destination; // from in mapped
+        if (!payerMap[payer]) payerMap[payer] = { amount: 0, count: 0 };
+        payerMap[payer].amount += parseFloat(tx.amount);
+        payerMap[payer].count += 1;
+      });
+      const topPayers = Object.entries(payerMap)
+        .map(([address, data]) => ({ address, ...data }))
+        .sort((a, b) => b.amount - a.amount)
+        .slice(0, 10);
+      
+      const assetMap: { [key: string]: number } = {};
+      transactions.forEach(tx => {
+        assetMap[tx.asset] = (assetMap[tx.asset] || 0) + parseFloat(tx.amount);
+      });
+      const assetBreakdown = Object.entries(assetMap)
+        .map(([asset, amount]) => ({
+          asset,
+          amount,
+          percentage: totalRevenue > 0 ? (amount / totalRevenue) * 100 : 0
+        }))
+        .sort((a, b) => b.amount - a.amount);
+      
+      const growthRate = 0; // Calculate from history if available
+      
+      setAnalytics({
+        totalRevenue,
+        totalTransactions,
+        averageTransaction,
+        dailyAverage,
+        weeklyAverage,
+        monthlyAverage,
+        topPayers,
+        assetBreakdown,
+        growthRate
+      });
     } catch (error) {
       console.error('Failed to load analytics:', error);
     } finally {
@@ -39,87 +97,7 @@ export default function PaymentAnalytics({ user }: PaymentAnalyticsProps) {
     }
   };
 
-  const generateMockAnalytics = () => {
-    const days = timeRange === '7d' ? 7 : timeRange === '30d' ? 30 : 90;
-    const transactions = generateMockTransactions(days);
-    
-    const totalRevenue = transactions.reduce((sum, tx) => sum + parseFloat(tx.amount), 0);
-    const totalTransactions = transactions.length;
-    const averageTransaction = totalTransactions > 0 ? totalRevenue / totalTransactions : 0;
-    
-    const dailyAverage = totalRevenue / days;
-    const weeklyAverage = totalRevenue / (days / 7);
-    const monthlyAverage = totalRevenue / (days / 30);
-    
-    // Top payers
-    const payerMap: { [key: string]: { amount: number; count: number } } = {};
-    transactions.forEach(tx => {
-      if (tx.destination === user.stellarPublicKey) {
-        const payer = 'Payer_' + Math.floor(Math.random() * 100);
-        if (!payerMap[payer]) {
-          payerMap[payer] = { amount: 0, count: 0 };
-        }
-        payerMap[payer].amount += parseFloat(tx.amount);
-        payerMap[payer].count += 1;
-      }
-    });
-    
-    const topPayers = Object.entries(payerMap)
-      .map(([address, data]) => ({ address, ...data }))
-      .sort((a, b) => b.amount - a.amount)
-      .slice(0, 10);
-    
-    // Asset breakdown
-    const assetMap: { [key: string]: number } = {};
-    transactions.forEach(tx => {
-      assetMap[tx.asset] = (assetMap[tx.asset] || 0) + parseFloat(tx.amount);
-    });
-    
-    const assetBreakdown = Object.entries(assetMap)
-      .map(([asset, amount]) => ({
-        asset,
-        amount,
-        percentage: (amount / totalRevenue) * 100
-      }))
-      .sort((a, b) => b.amount - a.amount);
-    
-    // Growth rate (mock calculation)
-    const growthRate = Math.random() * 40 - 10; // -10% to +30%
-    
-    return {
-      totalRevenue,
-      totalTransactions,
-      averageTransaction,
-      dailyAverage,
-      weeklyAverage,
-      monthlyAverage,
-      topPayers,
-      assetBreakdown,
-      growthRate
-    };
-  };
 
-  const generateMockTransactions = (days: number): PaymentRequest[] => {
-    const transactions: PaymentRequest[] = [];
-    const now = new Date();
-    
-    for (let i = 0; i < days * 3; i++) {
-      const date = new Date(now);
-      date.setDate(date.getDate() - Math.floor(Math.random() * days));
-      
-      transactions.push({
-        id: `tx_${i}`,
-        amount: (Math.random() * 500 + 1).toFixed(7),
-        asset: ['XLM', 'USD', 'EUR', 'NGN'][Math.floor(Math.random() * 4)],
-        destination: user.stellarPublicKey,
-        status: 'completed',
-        createdAt: date,
-        completedAt: date
-      });
-    }
-    
-    return transactions;
-  };
 
   if (isLoading) {
     return (
