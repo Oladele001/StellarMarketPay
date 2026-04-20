@@ -45,18 +45,22 @@ export default function AuthForm({ onAuthSuccess }: AuthFormProps) {
       }
       const publicKey = accessResponse.address;
 
-      // 2. Optional: Validate Network (warn but don't block)
+      // 2. BLOCKING Network check
+      // Network check AFTER connect (non-blocking)
       const netResponse = await getNetwork();
+      console.log('Connected on network:', netResponse.network);
+      let networkWarning = '';
       if (netResponse.network !== 'TESTNET') {
-        console.warn('Wallet on', netResponse.network, '- Testnet recommended for MVP');
-        // Proceed anyway for demo flexibility
+        networkWarning = `Warning: On ${netResponse.network}. Switch to TESTNET in extension for full features.`;
+        console.warn(networkWarning);
       }
 
       // 3. Connect User
       const user = await AuthService.connectWallet(publicKey);
       onAuthSuccess(user);
     } catch (err: any) {
-      setError(err?.message || 'Failed to connect wallet');
+      console.error('AuthForm connect failed:', err);
+        setError(`Connection failed: ${err?.message || 'Unknown error'}. Steps: 1) Unlock Freighter 2) TESTNET network 3) Disable popup blocker 4) Refresh. Check F12 console.`);
     } finally {
       setIsLoading(false);
     }

@@ -1,4 +1,5 @@
 'use client';
+import { StellarService } from '@/lib/stellar';
 
 import { useState, useEffect } from 'react';
 import { User } from '@/types/auth';
