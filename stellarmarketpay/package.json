@@ -12,13 +12,13 @@
     "@stellar/freighter-api": "^6.0.1",
     "@stellar/stellar-sdk": "^12.2.0",
     "lucide-react": "^0.376.0",
+    "next": "^14.2.3",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-qr-code": "^2.0.15",
     "recharts": "^2.12.7"
   },
   "devDependencies": {
-    "next": "^14.2.3",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
