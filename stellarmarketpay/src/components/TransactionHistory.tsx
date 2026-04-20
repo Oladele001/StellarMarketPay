@@ -25,7 +25,7 @@ export default function TransactionHistory({ user }: TransactionHistoryProps) {
     setIsLoading(true);
     try {
       const history = await StellarService.getPaymentsHistory(user.stellarPublicKey);
-      const mapped = history.map((tx: any) => {
+      const mapped: PaymentRequest[] = history.map((tx: any) => {
         const isIncoming = tx.to === user.stellarPublicKey;
         return {
           id: tx.id,

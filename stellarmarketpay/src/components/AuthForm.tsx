@@ -78,10 +78,10 @@ export default function AuthForm({ onAuthSuccess }: AuthFormProps) {
             <span className="text-4xl text-green-400">⚡</span>
           </div>
           <h2 className="mt-8 text-center text-3xl font-extrabold text-white tracking-tight">
-            Accept instant payments with Stellar — almost zero fees
+            Accept instant payments with Stellar , almost zero fees
           </h2>
           <p className="mt-3 text-center text-sm text-gray-400">
-            A beautiful, mobile-first app designed to help you accept instant payments securely without any middlemen.
+            A beautiful Web App that is designed to help you accept instant payments securely without any middlemen.
           </p>
         </div>
 

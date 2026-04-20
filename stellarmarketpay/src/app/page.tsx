@@ -44,7 +44,10 @@ export default function Home() {
       }
 
       const connectedUser = await AuthService.connectWallet(pk);
-      setUser({...connectedUser, networkWarning });
+      setUser({
+  ...connectedUser,
+  networkWarning : networkWarning || undefined
+});
       
     } catch (error: any) {
       console.error('❌ Failed:', error);

@@ -6,6 +6,7 @@ export interface User {
   isVerified: boolean;
   createdAt: Date;
   lastLogin?: Date;
+  networkWarning?: string;
 }
 
 export interface AuthState {

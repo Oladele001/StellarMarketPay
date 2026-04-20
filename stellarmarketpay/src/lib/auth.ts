@@ -1,19 +1,24 @@
+// src/lib/auth.ts
 import { User } from '@/types/auth';
 
 export class AuthService {
   private static readonly STORAGE_KEY = 'connected_stellar_wallet_user';
 
-  // Login using Freighter public key
-  static async connectWallet(publicKey: string): Promise<User> {
-    // We create a mock user object for the platform based on their wallet public key.
+  // Connect wallet with optional network warning
+  static async connectWallet(
+    publicKey: string, 
+    networkWarning: string = ''
+  ): Promise<User> {
+    
     const user: User = {
-      id: publicKey.substring(0, 10), // mock ID based on the key
-      email: `${publicKey.substring(0, 8)}@stellar.wallet`, // fake email to satisfy User interface
+      id: publicKey.substring(0, 10),
+      email: `${publicKey.substring(0, 8)}@stellar.wallet`,
       name: `User ${publicKey.substring(0, 5)}`,
       stellarPublicKey: publicKey,
       isVerified: true,
       createdAt: new Date(),
-      lastLogin: new Date()
+      lastLogin: new Date(),
+      networkWarning: networkWarning || undefined
     };
     
     this.persistAuth(user);
@@ -64,7 +69,6 @@ export class AuthService {
   }
 
   static getStellarSecret(userId: string): string | null {
-    // Secret keys fall out of scope with Freighter as Freighter manages the secrets.
     return null;
   }
 }
